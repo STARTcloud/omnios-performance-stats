@@ -18,7 +18,7 @@ import java.util.TimeZone
 // newline character to use for output files
 NEWLINE = "\n"
 // base path for output files
-String OUTPUT_DIRECTORY = '/var/log/prominic/performance-stats'
+String OUTPUT_DIRECTORY = '/performance-stats'
 // expected path to rwtop command
 String RWTOP_COMMAND = '/opt/DTT/rwtop'
 // Default interval for rwtop command, in seconds 
@@ -39,7 +39,7 @@ todayFormat.setTimeZone(TIME_ZONE)
 String today = todayFormat.format(new Date(timestampMillis)) 
 
 // make sure the output directory exists
-new File(OUTPUT_DIRECTORY).mkdirs()
+//new File(OUTPUT_DIRECTORY).mkdirs()
 
 String formatNumber(def number,boolean withDecimals=false){
 	String format=withDecimals?"#,###.00":"#,###"
@@ -53,7 +53,7 @@ String formatNumber(def number,boolean withDecimals=false){
 int interval = DEFAULT_INTERVAL_SECONDS
 if (args.length >= 1) {
 	// fail on non-number.  TODO:  cleaner error reporting?
-	interval = Integer.toString(args[0])
+	interval = Integer.parseInt(args[0])
 }
 
 // list all zones, so that we can save a spot for the halted zones

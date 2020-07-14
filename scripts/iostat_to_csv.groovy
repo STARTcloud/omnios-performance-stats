@@ -8,7 +8,7 @@ import java.util.Date
 
 
 // Constants - move to configuration file?
-String OUTPUT_DIRECTORY = '/var/log/prominic/performance-stats'
+String OUTPUT_DIRECTORY = '/performance-stats'
 // The interval to use for iostat, in seconds
 int INTERVAL_SECONDS = 10
 // Timezone - used so that the files wrap at a consistent time
@@ -26,7 +26,7 @@ SimpleDateFormat todayFormat = new SimpleDateFormat('yyyyMMdd')
 String today = todayFormat.format(new Date(timestampMillis)) 
 
 // make sure the output directory exists
-new File(OUTPUT_DIRECTORY).mkdirs()
+//new File(OUTPUT_DIRECTORY).mkdirs()
 
 def poolProcess = "zpool list".execute()
 poolProcess.waitFor()
