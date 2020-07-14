@@ -1,0 +1,4 @@
+.DS_Store
+gnuplot/.DS_Store
+gnuplot/conf/*
+gnuplot/data/*
