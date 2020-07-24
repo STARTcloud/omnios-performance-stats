@@ -2,3 +2,4 @@
 gnuplot/.DS_Store
 gnuplot/conf/*
 gnuplot/data/*
+*.swp
