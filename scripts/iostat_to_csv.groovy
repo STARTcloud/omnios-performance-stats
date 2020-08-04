@@ -23,6 +23,7 @@ String timestamp = dateFormat.format(new Date(timestampMillis))
 
 // day-only format for log files
 SimpleDateFormat todayFormat = new SimpleDateFormat('yyyyMMdd')
+todayFormat.setTimeZone(TIME_ZONE)
 String today = todayFormat.format(new Date(timestampMillis)) 
 
 // make sure the output directory exists
