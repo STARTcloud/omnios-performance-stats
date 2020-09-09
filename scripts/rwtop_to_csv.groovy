@@ -13,6 +13,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
 
+import java.util.ArrayList
+import java.util.Map
+
 
 // Constants
 // newline character to use for output files
@@ -90,8 +93,85 @@ output.eachLine { line ->
 }
 
 
+// List all VirtualBox VMs and pools
+// This assumes that the VM disk paths match the VM name.  If this is not accurate, then 
+// Only lists the mapping for running VMs - change to "list vms" for a full map.
+def vboxArrayCmd = "pfexec VBoxManage list vms -l | grep '): /' | grep -v /templates/ | sed 's:^.*\\: /\\([^/]*\\)/[^/]*/\\([0-9]*\\)\\(--[^/]*\\)/.*\$:\\2 \\1 \\2\\3:' | sort | uniq"
+// get the full VM name instead - I felt that it would be more reliable to match the ID
+//def vboxArrayProc = "pfexec VBoxManage list vms -l | grep '): /' | sed 's:^.*\\: /\\([^/]*\\)/[^/]*/\\([^/]*\\)/.*\$:\\2 \\1:' | sort | uniq".execute()
+// Use this API to run complicated commands
+def vboxArrayProc = ['/bin/bash', '-c', vboxArrayCmd].execute()
+vboxArrayProc.waitFor()
+
+def vboxMap = [:]
+if (vboxArrayProc.exitValue() == 0) {
+    // build a map
+    vboxArrayProc.text.eachLine { line ->
+        String[] tokens = line.split(' ')
+        if (tokens.length != 3) {
+            println "ERROR:  Unparsed VirtualBox disk line:  '$line'"
+        }
+
+        String vmID = tokens[0]
+        String pool = tokens[1]
+        String vmName = tokens[2]
+        if (vboxMap.keySet().contains(vmID)) {
+            println "WARNING:  VM '$vmID' has multiple pools.  Only '${vboxArrayMap.get(vmID)}' will be used"
+        }
+        else {
+            // match names of zoneMap
+            vboxMap.put(vmID, [zoneID:vmID, pool:pool, name:vmName])
+        }
+    }
+}
+else {
+    // Assume no VirtualBox VMs on this host
+    // TODO:  report an error if there are VBoxHeadless instances?
+    //println "DEBUG:  Failed to run VirtualBox pool command.  Error code ${vboxArrayProc.exitValue()}, Output:  '${vboxArrayProc.getErrorStream().text}'"
+}
+// debug
+//println "## VM ID, Name, Pool"
+//vboxMap.each {k, v ->
+//    println "$k, ${v.name}, ${v.pool}"
+//}
+
+
+// Build a map from pid to VM ID for VBoxHeadless commands
+// I get the VM ID instead of the full name because the full name is cut off in some examples
+def vboxPidCmd = "ps -e -o pid,args | grep VBoxHeadless | grep -v grep | sed 's/^ *\\([0-9]*\\) *.*--comment *\\([0-9]*\\)--.*\$/\\1 \\2/'"
+// Use this API to run complicated commands
+def vboxPidProc = ['/bin/bash', '-c', vboxPidCmd].execute()
+vboxPidProc.waitFor()
+
+def vboxPidMap = [:]
+if (vboxPidProc.exitValue() == 0) {
+    vboxPidProc.text.eachLine { line ->
+        String[] tokens = line.split(' ')
+        if (tokens.length != 2) {
+            println "ERROR:  Unparsed VBoxHeadless process line:  '$line'"
+        }
+
+        String vmID = tokens[0]
+        String pool = tokens[1]
+        if (vboxPidMap.keySet().contains(vmID)) {
+            println "WARNING:  VM '$vmID' has multiple pools.  Only '${vboxPidMap.get(vmID)}' will be used"
+        }
+        else {
+            vboxPidMap.put(vmID, pool)
+        }
+    }
+}
+else {
+    println "Error on VBoxHeadless PID command:  Error code:  ${vboxPidProc.exitValue()}, Output: '${vboxPidProc.getErrorStream().text}'."
+}
+// debug
+//println "## PID, VM ID"
+//vboxPidMap.each {k, v ->
+//    println "$k, $v"
+//}
+
 //println "Collecting $interval seconds of data"
-//String rwtopCommand = "pfexec rwtop -C -Z $interval 1"
+// Example:  pfexec /opt/DTT/rwtop -C -Z 10 1
 rwtopProcess = "pfexec $RWTOP_COMMAND -C -Z $interval 1".execute()
 rwtopProcess.waitFor()
 if (rwtopProcess.exitValue() != 0) {
@@ -120,6 +200,23 @@ rwtopProcess.text.eachLine {String line ->
 			def zone = zoneMap[zoneID]
 			String zoneName = zone ? zone['name'] : 'Unknown'
 			String pool = zone ? zone['pool'] : 'Unknown'
+                        if (zoneID == '0') {
+                            // check if this is a VirtualBox instance
+                            String pid = tokens[1]
+                            String cmd = tokens[3]
+                            if (cmd == "VBoxHeadless") {
+                                // This is a VirtualBox instance
+                                // Try to lookup the VM info, and report as "UnknownVirtualBox" if not found
+                                String vmID = vboxPidMap[pid]
+                                def vm = vmID ? vboxMap[vmID] : null
+                                zoneName = vm ? vm['name'] : 'UnknownVirtualBox'
+                                pool = vm ? vm['pool'] : 'UnknownVirtualBox'
+
+                                //println "DEBUG:  Process $pid is VM $vmID ($zoneName, $pool)"
+
+                            }
+                            // else - treat as normal process
+                        }
 			////println "${zoneName}:"
 			////println line
 
@@ -173,7 +270,10 @@ def writeTotalClosure = {process ->
 }
 
 def byPool = processes.groupBy {process -> process['pool']}
-def allZonesByPool = zoneMap.values().groupBy {zone -> zone['pool']}
+// organize zones and VMs by pool
+def allVMs = new ArrayList<Map>(zoneMap.values())
+allVMs.addAll(vboxMap.values())
+def allZonesByPool = allVMs.groupBy {zone -> zone['pool']}
 
 
 byPool.each {pool, poolProcesses ->
