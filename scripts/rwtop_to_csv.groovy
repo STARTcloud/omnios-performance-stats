@@ -116,7 +116,7 @@ if (vboxArrayProc.exitValue() == 0) {
         String pool = tokens[1]
         String vmName = tokens[2]
         if (vboxMap.keySet().contains(vmID)) {
-            println "WARNING:  VM '$vmID' has multiple pools.  Only '${vboxArrayMap.get(vmID)}' will be used"
+            println "WARNING:  VM '$vmID' has multiple pools.  Only '${vboxMap.get(vmID)}' will be used"
         }
         else {
             // match names of zoneMap
