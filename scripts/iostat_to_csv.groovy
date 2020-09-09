@@ -29,7 +29,7 @@ String today = todayFormat.format(new Date(timestampMillis))
 // make sure the output directory exists
 //new File(OUTPUT_DIRECTORY).mkdirs()
 
-def poolProcess = "zpool list".execute()
+def poolProcess = "zpool list -H".execute()
 poolProcess.waitFor()
 def pools = []
 poolProcess.text.eachLine {line ->
