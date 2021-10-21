@@ -10,4 +10,5 @@ cd /opt/prominic/performance-stats/bin
 pkill -f 'java.*rwtop_to_csv'
 
 
-java -cp ".:groovy-3.0.3.jar" rwtop_to_csv 10 >/tmp/rwtop_to_csv.log 2>&1 || true
+GROOVY_JAR='/opt/ooce/groovy-3.0/lib/*'
+java -cp ".:$GROOVY_JAR" rwtop_to_csv 10 >/tmp/rwtop_to_csv.log 2>&1 || true
